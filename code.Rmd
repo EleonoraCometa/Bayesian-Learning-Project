@@ -1,0 +1,62 @@
+---
+title: "Code"
+output: html_document
+date: "2024-08-10"
+---
+```{r}
+# pyplot-like plots in R
+library("ggplot2")
+```
+
+Read data:
+```{r}
+data = read.csv("indprod.csv")
+data$DATE = as.Date(data$DATE)
+```
+
+```{r}
+g1 = ggplot(data=data, aes(x=as.Data(DATE),y=INDPRO_PCH))
+
+# Plot dell'indice nel tempo
+plot(as.Date(data$DATE), data$INDPRO_PCH, type="l", 
+     col="black", lwd=1,
+     xlab="Date", ylab="IPI Index", main="Time-Series of IPI")
+```
+
+```{r}
+data_ = data[, -1]
+model = lm(INDPRO_PCH ~ ., data = data_)
+
+beta = coef(model)
+beta
+```
+```{r}
+ggplot(data = data, aes(x = DATE, y = INDPRO_PCH)) +
+  geom_point(color = "steelblue") +
+  geom_abline(intercept = beta, slope = beta, col='darkorange') +
+  xlab("Abdomen circumference (cm)") + ylab("Body fat (pc)") + 
+  ggtitle("Regression Line")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
