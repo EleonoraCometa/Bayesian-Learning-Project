@@ -38,7 +38,21 @@ ggplot(data = data, aes(x = DATE, y = INDPRO_PCH)) +
   ggtitle("Regression Line")
 ```
 
+```{r}
+alphapar=10
+data_no_date = data[, -1]
+cog.bas = bas.lm(INDPRO_PCH ~ ., data =  data_no_date, prior="g-prior", alpha=alphapar, modelprior = Bernoulli(1), include.always = ~ ., n.models = 1)
+beta = coef(cog.bas)
+beta
+```
 
+```{r}
+plot(beta, subset = 1:10, ask = F)
+```
+```{r}
+confint(beta)
+plot(confint(beta),main=paste("g-prior alpha=",alphapar))
+```
 
 
 
