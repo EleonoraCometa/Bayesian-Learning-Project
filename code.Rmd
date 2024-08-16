@@ -3,12 +3,15 @@ title: "Code"
 output: html_document
 date: "2024-08-10"
 ---
+
 ```{r}
 # pyplot-like plots in R
 library("ggplot2")
+library("BAS")
 ```
 
 Read data:
+
 ```{r}
 data = read.csv("indprod.csv")
 data$DATE = as.Date(data$DATE)
@@ -30,13 +33,20 @@ model = lm(INDPRO_PCH ~ ., data = data_)
 beta = coef(model)
 beta
 ```
+
+# Frequenstistic Linear Regression
+
 ```{r}
 ggplot(data = data, aes(x = DATE, y = INDPRO_PCH)) +
   geom_point(color = "steelblue") +
   geom_abline(intercept = beta, slope = beta, col='darkorange') +
-  xlab("Abdomen circumference (cm)") + ylab("Body fat (pc)") + 
+  xlab("Date") + ylab("IPI") + 
   ggtitle("Regression Line")
 ```
+
+# Bayesian Linear Regression
+
+## Zelman's G-prior
 
 ```{r}
 alphapar=10
@@ -47,30 +57,49 @@ beta
 ```
 
 ```{r}
-plot(beta, subset = 1:10, ask = F)
+plot(beta, subset = 1:12, ask = F)
+```
+
+```{r}
+credible_intervals = confint(beta)
+plot(credible_intervals, main=paste("g-prior alpha=",alphapar))
 ```
 ```{r}
-confint(beta)
-plot(confint(beta),main=paste("g-prior alpha=",alphapar))
+data_
 ```
 
+```{r}
+data_1 = data_[, -1]
+beta_mean = beta$postmean
+
+# Model 
+y_hat =  beta_mean[1] + 
+         beta_mean[2] *   data_$WILL5000PR_PCH + 
+         beta_mean[3] *   data_$HSN1F_PCH + 
+         beta_mean[4] *   data_$DCOILBRENTEU_PCH + 
+         beta_mean[5] *   data_$CORESTICKM159SFRBATL_PCH + 
+         beta_mean[6] *   data_$TOTALSA_PCH + 
+         beta_mean[7] *   data_$CPIUFDSL_PCH + 
+         beta_mean[8] *   data_$DEXJPUS_PCH + 
+         beta_mean[9] *   data_$MICH_PCH + 
+         beta_mean[10] *  data_$VIXCLS_PCH + 
+         beta_mean[11] *  data_$PAYEMS_PCH + 
+         beta_mean[12] *  data_$PPIACO_PCH
+```
+```{r}
+
+# Plot
+plot1 = 
+  ggplot(data = data, aes(x = DATE, y = INDPRO_PCH)) + 
+  geom_point(color = "steelblue") + xlab("DATE") +
+  geom_line(data = data, aes(x = DATE, y = y_hat, color = "first"),lty=1) +
+  scale_colour_manual(values="darkorange", labels="Posterior Mean", name="")
+plot1
+```
+```{r}
+predictions <- predict(cog.bas, newdata = data_no_date, estimator = "BMA", 
+                       se.fit = TRUE, interval = "confidence")
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```
 
