@@ -51,8 +51,8 @@ ggplot(data = data, aes(x = DATE, y = INDPRO_PCH)) +
 ```{r}
 alphapar=10
 data_no_date = data[, -1]
-cog.bas = bas.lm(INDPRO_PCH ~ ., data =  data_no_date, prior="g-prior", alpha=alphapar, modelprior = Bernoulli(1), include.always = ~ ., n.models = 1)
-beta = coef(cog.bas)
+model_object = bas.lm(INDPRO_PCH ~ ., data =  data_no_date, prior="g-prior", alpha=alphapar, modelprior = Bernoulli(1), include.always = ~ ., n.models = 1)
+beta = coef(model_object)
 beta
 ```
 
@@ -86,8 +86,16 @@ y_hat =  beta_mean[1] +
          beta_mean[11] *  data_$PAYEMS_PCH + 
          beta_mean[12] *  data_$PPIACO_PCH
 ```
-```{r}
 
+
+```{r}
+out = confint(beta)[, 1:2]
+out
+```
+
+
+
+```{r}
 # Plot
 plot1 = 
   ggplot(data = data, aes(x = DATE, y = INDPRO_PCH)) + 
@@ -97,8 +105,9 @@ plot1 =
 plot1
 ```
 ```{r}
-predictions <- predict(cog.bas, newdata = data_no_date, estimator = "BMA", 
+predictions <- predict(model_object, newdata = data_no_date, estimator = "BMA", 
                        se.fit = TRUE, interval = "confidence")
+
 
 
 ```
