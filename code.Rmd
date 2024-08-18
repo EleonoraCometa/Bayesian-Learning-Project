@@ -8,6 +8,8 @@ date: "2024-08-10"
 # pyplot-like plots in R
 library("ggplot2")
 library("BAS")
+library(loo)
+
 ```
 
 Read data:
@@ -33,24 +35,37 @@ y_freq = predict(model)
 coef(model)
 ```
 
+```{r}
+set.seed(123)  # Imposta un seme per rendere la suddivisione riproducibile
+train_index <- sample(1:nrow(data_), 0.7 * nrow(data_))
+
+# Training set
+train_data = data[train_index, ]
+train_data_ = train_data[, -1]
+
+# Testing set
+test_data = data[-train_index, ]
+test_data_ = test_data[, -1]
+```
+
 # Frequenstistic Linear Regression
 
 ```{r}
-ggplot(data = data, aes(x = DATE, y = INDPRO_PCH)) +
+ggplot(data = train_data, aes(x = DATE, y = INDPRO_PCH)) +
   geom_point(color = "steelblue") +
-  geom_line(data = data, aes(x = DATE, y = y_hat, color = "first"),  lty = 1) +
+  geom_line(data = train_data, aes(x = DATE, y = y_hat, color = "first"),  lty = 1) +
   xlab("Date") + ylab("IPI") + 
   ggtitle("Regression Line")
 ```
 
 # Bayesian Linear Regression
 
-## Zelman's G-prior
+## Zellner's G-prior
 
 ```{r}
-alphapar=10
-data_no_date = data[, -1]
-model_object = bas.lm(INDPRO_PCH ~ ., data =  data_no_date, prior="g-prior", alpha=alphapar, modelprior = Bernoulli(1), include.always = ~ ., n.models = 1)
+alphapar = 10
+# data_no_date = data[, -1]
+model_object = bas.lm(INDPRO_PCH ~ ., data =  train_data_, prior="g-prior", alpha=alphapar, modelprior = Bernoulli(1), include.always = ~ ., n.models = 1)
 beta = coef(model_object)
 beta
 ```
@@ -61,10 +76,7 @@ plot(beta, subset = 1:12, ask = F)
 
 ```{r}
 credible_intervals = confint(beta)
-plot(credible_intervals, main=paste("g-prior alpha=",alphapar))
-```
-```{r}
-data_
+plot(credible_intervals, main=paste("g-prior alpha=",alphapar), cex.axis=0.2)
 ```
 
 ```{r}
@@ -73,17 +85,17 @@ beta_mean = beta$postmean
 
 # Model 
 y_hat =  beta_mean[1] + 
-         beta_mean[2] *   data_$WILL5000PR_PCH + 
-         beta_mean[3] *   data_$HSN1F_PCH + 
-         beta_mean[4] *   data_$DCOILBRENTEU_PCH + 
-         beta_mean[5] *   data_$CORESTICKM159SFRBATL_PCH + 
-         beta_mean[6] *   data_$TOTALSA_PCH + 
-         beta_mean[7] *   data_$CPIUFDSL_PCH + 
-         beta_mean[8] *   data_$DEXJPUS_PCH + 
-         beta_mean[9] *   data_$MICH_PCH + 
-         beta_mean[10] *  data_$VIXCLS_PCH + 
-         beta_mean[11] *  data_$PAYEMS_PCH + 
-         beta_mean[12] *  data_$PPIACO_PCH
+         beta_mean[2] *   train_data_$WILL5000PR_PCH + 
+         beta_mean[3] *   train_data_$HSN1F_PCH + 
+         beta_mean[4] *   train_data_$DCOILBRENTEU_PCH + 
+         beta_mean[5] *   train_data_$CORESTICKM159SFRBATL_PCH + 
+         beta_mean[6] *   train_data_$TOTALSA_PCH + 
+         beta_mean[7] *   train_data_$CPIUFDSL_PCH + 
+         beta_mean[8] *   train_data_$DEXJPUS_PCH + 
+         beta_mean[9] *   train_data_$MICH_PCH + 
+         beta_mean[10] *  train_data_$VIXCLS_PCH + 
+         beta_mean[11] *  train_data_$PAYEMS_PCH + 
+         beta_mean[12] *  train_data_$PPIACO_PCH
 ```
 
 
@@ -93,30 +105,30 @@ beta_low = out[,1]
 beta_up = out[,2]
 
 y_low =  beta_low[1] + 
-         beta_low[2] *   data_$WILL5000PR_PCH + 
-         beta_low[3] *   data_$HSN1F_PCH + 
-         beta_low[4] *   data_$DCOILBRENTEU_PCH + 
-         beta_low[5] *   data_$CORESTICKM159SFRBATL_PCH + 
-         beta_low[6] *   data_$TOTALSA_PCH + 
-         beta_low[7] *   data_$CPIUFDSL_PCH + 
-         beta_low[8] *   data_$DEXJPUS_PCH + 
-         beta_low[9] *   data_$MICH_PCH + 
-         beta_low[10] *  data_$VIXCLS_PCH + 
-         beta_low[11] *  data_$PAYEMS_PCH + 
-         beta_low[12] *  data_$PPIACO_PCH
+         beta_low[2] *   train_data_$WILL5000PR_PCH + 
+         beta_low[3] *   train_data_$HSN1F_PCH + 
+         beta_low[4] *   train_data_$DCOILBRENTEU_PCH + 
+         beta_low[5] *   train_data_$CORESTICKM159SFRBATL_PCH + 
+         beta_low[6] *   train_data_$TOTALSA_PCH + 
+         beta_low[7] *   train_data_$CPIUFDSL_PCH + 
+         beta_low[8] *   train_data_$DEXJPUS_PCH + 
+         beta_low[9] *   train_data_$MICH_PCH + 
+         beta_low[10] *  train_data_$VIXCLS_PCH + 
+         beta_low[11] *  train_data_$PAYEMS_PCH + 
+         beta_low[12] *  train_data_$PPIACO_PCH
 
 y_up =   beta_up[1] + 
-         beta_up[2] *   data_$WILL5000PR_PCH + 
-         beta_up[3] *   data_$HSN1F_PCH + 
-         beta_up[4] *   data_$DCOILBRENTEU_PCH + 
-         beta_up[5] *   data_$CORESTICKM159SFRBATL_PCH + 
-         beta_up[6] *   data_$TOTALSA_PCH + 
-         beta_up[7] *   data_$CPIUFDSL_PCH + 
-         beta_up[8] *   data_$DEXJPUS_PCH + 
-         beta_up[9] *   data_$MICH_PCH + 
-         beta_up[10] *  data_$VIXCLS_PCH + 
-         beta_up[11] *  data_$PAYEMS_PCH + 
-         beta_up[12] *  data_$PPIACO_PCH
+         beta_up[2] *   train_data_$WILL5000PR_PCH + 
+         beta_up[3] *   train_data_$HSN1F_PCH + 
+         beta_up[4] *   train_data_$DCOILBRENTEU_PCH + 
+         beta_up[5] *   train_data_$CORESTICKM159SFRBATL_PCH + 
+         beta_up[6] *   train_data_$TOTALSA_PCH + 
+         beta_up[7] *   train_data_$CPIUFDSL_PCH + 
+         beta_up[8] *   train_data_$DEXJPUS_PCH + 
+         beta_up[9] *   train_data_$MICH_PCH + 
+         beta_up[10] *  train_data_$VIXCLS_PCH + 
+         beta_up[11] *  train_data_$PAYEMS_PCH + 
+         beta_up[12] *  train_data_$PPIACO_PCH
 ```
 
 
@@ -124,22 +136,22 @@ y_up =   beta_up[1] +
 ```{r}
 # Plot
 plot1 = 
-  ggplot(data = data, aes(x = DATE, y = INDPRO_PCH)) + 
+  ggplot(data = train_data, aes(x = DATE, y = INDPRO_PCH)) + 
   geom_point(color = "steelblue") + xlab("DATE") +
-  geom_line(data = data, aes(x = DATE, y = y_hat, color = "first"),  lty = 1) +
-  geom_line(data = data, aes(x = DATE, y = y_low, lty = "second")) +
-  geom_line(data = data, aes(x = DATE, y = y_up,  lty = "third")) +
+  geom_line(data = train_data, aes(x = DATE, y = y_hat, color = "first"),  lty = 1) +
+  geom_line(data = train_data, aes(x = DATE, y = y_low, lty = "second")) +
+  geom_line(data = train_data, aes(x = DATE, y = y_up,  lty = "third")) +
   scale_colour_manual(values="darkorange", labels="Posterior Mean", name="") +
   scale_linetype_manual(values = c(1, 2), labels = c("lower" , "upper"),
                         name = "95% C.I.")
 
 plot1
 
-y_fit = predict(model_object, newdata = data_1)$fit
+y_fit = predict(model_object, newdata = train_data_)$fit
 plot2 = 
-  ggplot(data = data, aes(x = DATE, y = INDPRO_PCH)) + 
+  ggplot(data = train_data, aes(x = DATE, y = INDPRO_PCH)) + 
   geom_point(color = "steelblue") + xlab("DATE") +
-  geom_line(data = data, aes(x = DATE, y = y_fit, color = "first"),  lty = 1) +
+  geom_line(data = train_data, aes(x = DATE, y = y_fit, color = "first"),  lty = 1) +
   scale_colour_manual(values="darkorange", labels="Posterior Mean", name="") +
   scale_linetype_manual(values = c(1, 2), labels = c("lower" , "upper"),
                         name = "95% C.I.")
@@ -148,21 +160,73 @@ plot2
 ```
 ```{r}
 predictions = predict(model_object, 
-                      newdata = data_1,
+                      newdata = train_data_,
                       se.fit = TRUE)
 pred_intervals = confint(predictions, level = 0.95)
 y_pred_low = pred_intervals[,1]
 y_pred_up = pred_intervals[,2]
 
 plot3 = 
-  ggplot(data = data, aes(x = DATE, y = INDPRO_PCH)) + 
+  ggplot(data = train_data, aes(x = DATE, y = INDPRO_PCH)) + 
   geom_point(color = "steelblue") + xlab("DATE") +
-  geom_line(data = data, aes(x = DATE, y = y_hat, color = "first"),  lty = 1) +
-  geom_line(data = data, aes(x = DATE, y = y_pred_low, lty = "second")) +
-  geom_line(data = data, aes(x = DATE, y = y_pred_up,  lty = "third")) +
+  geom_line(data = train_data, aes(x = DATE, y = y_hat, color = "first"),  lty = 1) +
+  geom_line(data = train_data, aes(x = DATE, y = y_pred_low, lty = "second")) +
+  geom_line(data = train_data, aes(x = DATE, y = y_pred_up,  lty = "third")) +
   scale_colour_manual(values="darkorange", labels="Posterior Mean", name="") +
   scale_linetype_manual(values = c(1, 2), labels = c("lower" , "upper"),
                         name = "95% C.I.")
 plot3
+
 ```
+
+### Model Selection (metodo prof)
+```{r}
+cog.BIC = bas.lm(INDPRO_PCH ~ ., data = train_data_,
+                 prior = "BIC", modelprior = uniform())
+
+round(summary(cog.BIC), 2)
+
+# Find the index of the model with largest `logmarg`:
+cog.best = which.max(cog.BIC$logmarg)
+
+# Print the selected subset of variables:
+selectedVars = cog.BIC$which[[cog.best]]+1
+cog.BIC$namesx[selectedVars]
+
+```
+
+### Model Selection (metodo Bayes Factor -> esempio con una sola variabile)
+```{r}
+reduced_model = bas.lm(INDPRO_PCH ~ . - CPIUFDSL_PCH, data =  train_data_, prior="g-prior", alpha=alphapar, modelprior = Bernoulli(1), include.always = ~ ., n.models = 1)
+
+BF <- exp(model_object$logmarg - reduced_model$logmarg)
+BF
+# since it's below 1, it indicates that the data is more likely under the reduced model (removing CPIUFDSL_PCH) than under the full model.
+```
+
+
+## Zellner's JZS
+```{r}
+alphapar = 1
+model_object_2 = bas.lm(INDPRO_PCH ~ ., data =  train_data_, prior="JZS", alpha=1, modelprior = Bernoulli(1), include.always = ~ ., n.models = 1)
+beta_2 = coef(model_object_2)
+beta_2
+```
+
+```{r}
+plot(beta_2, subset = 1:12, ask = F)
+```
+
+```{r}
+credible_intervals_2 = confint(beta_2)
+plot(credible_intervals_2, main=paste("JZS-prior alpha=",alphapar), cex.axis=0.2)
+```
+```{r}
+BF_2 <- exp(model_object$logmarg - model_object_2$logmarg)
+BF_2
+```
+
+
+
+
 
