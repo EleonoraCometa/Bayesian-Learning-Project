@@ -17,6 +17,10 @@ Read data:
 ```{r}
 data = read.csv("indprod.csv")
 data$DATE = as.Date(data$DATE)
+
+
+# Remove outliers:
+# data = data[-which(data$INDPRO_PCH == min(data$INDPRO_PCH)),]
 ```
 
 ```{r}
@@ -51,11 +55,11 @@ test_data_ = test_data[, -1]
 # Frequenstistic Linear Regression
 
 ```{r}
-ggplot(data = train_data, aes(x = DATE, y = INDPRO_PCH)) +
-  geom_point(color = "steelblue") +
-  geom_line(data = train_data, aes(x = DATE, y = y_hat, color = "first"),  lty = 1) +
-  xlab("Date") + ylab("IPI") + 
-  ggtitle("Regression Line")
+# ggplot(data = train_data, aes(x = DATE, y = INDPRO_PCH)) +
+#  geom_point(color = "steelblue") +
+#  geom_line(data = train_data, aes(x = DATE, y = y_hat, color = "first"),  lty = 1) +
+#  xlab("Date") + ylab("IPI") + 
+#  ggtitle("Regression Line")
 ```
 
 # Bayesian Linear Regression
@@ -226,6 +230,52 @@ BF_2 <- exp(model_object$logmarg - model_object_2$logmarg)
 BF_2
 ```
 
+## Plot actual values against predicted ones using Test Set
+```{r}
+# Compute the predictions:
+pred.model_object <- predict(model_object, test_data_, estimator="BMA")
+
+# Create the actual and predicted variables:
+actualValues = test_data_$INDPRO_PCH
+predictedValues = pred.model_object$fit
+
+# Compute the residuals:
+residValues = predictedValues - actualValues
+
+# Plot actual vs predicted values:
+Pl1 = ggplot() + geom_point(aes(x = actualValues, y = predictedValues), color = "steelblue") +
+  xlab("Actual") + ylab("Predicted") + ggtitle("Predictions of INDPRO_CPH")
+
+# Plot the residuals:
+Pl2 = ggplot() + geom_point(aes(x = predictedValues, y = residValues), color = "darkred") +
+  xlab("Predicted") + ylab("Residuals") + ggtitle("Predicted VS Residuals")
+
+library(gridExtra)
+grid.arrange(Pl1, Pl2, ncol=2)
+```
+
+```{r}
+# Compute the predictions:
+pred.model_object_2 <- predict(model_object_2, test_data_, estimator="BMA")
+
+# Create the actual and predicted variables:
+actualValues = test_data_$INDPRO_PCH
+predictedValues = pred.model_object_2$fit
+
+# Compute the residuals:
+residValues = predictedValues - actualValues
+
+# Plot actual vs predicted values:
+Pl1 = ggplot() + geom_point(aes(x = actualValues, y = predictedValues), color = "steelblue") +
+  xlab("Actual") + ylab("Predicted") + ggtitle("Predictions of INDPRO_CPH")
+
+# Plot the residuals:
+Pl2 = ggplot() + geom_point(aes(x = predictedValues, y = residValues), color = "darkred") +
+  xlab("Predicted") + ylab("Residuals") + ggtitle("Predicted VS Residuals")
+
+library(gridExtra)
+grid.arrange(Pl1, Pl2, ncol=2)
+```
 
 
 
