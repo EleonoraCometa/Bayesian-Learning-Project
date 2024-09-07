@@ -1,0 +1,7 @@
+"0","```r
+resid = residuals(bodyfat.lm)
+n = length(resid)
+MSE = 1/ (n - 2) * sum((resid ^ 2))
+qqnorm(resid/sd(resid)) 
+qqline(resid/sd(resid))
+```"

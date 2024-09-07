@@ -1,0 +1,98 @@
+---
+title: "Code"
+output: html_document
+date: "2024-08-10"
+---
+
+```{r}
+# pyplot-like plots in R
+library("ggplot2")
+library("BAS")
+```
+
+Read data:
+
+```{r}
+data = read.csv("indprod.csv")
+data$DATE = as.Date(data$DATE)
+```
+
+```{r}
+g1 = ggplot(data=data, aes(x=as.Data(DATE),y=INDPRO_PCH))
+
+# Plot dell'indice nel tempo
+plot(as.Date(data$DATE), data$INDPRO_PCH, type="l", 
+     col="black", lwd=1,
+     xlab="Date", ylab="IPI Index", main="Time-Series of IPI")
+```
+
+```{r}
+data_ = data[, -1]
+model = lm(INDPRO_PCH ~ ., data = data_)
+
+beta = coef(model)
+beta
+```
+
+# Frequenstistic Linear Regression
+
+```{r}
+ggplot(data = data, aes(x = DATE, y = INDPRO_PCH)) +
+  geom_point(color = "steelblue") +
+  geom_abline(intercept = beta, slope = beta, col='darkorange') +
+  xlab("Date") + ylab("IPI") + 
+  ggtitle("Regression Line")
+```
+
+# Bayesian Linear Regression
+
+## Zelman's G-prior
+
+```{r}
+alphapar=10
+data_no_date = data[, -1]
+cog.bas = bas.lm(INDPRO_PCH ~ ., data =  data_no_date, prior="g-prior", alpha=alphapar, modelprior = Bernoulli(1), include.always = ~ ., n.models = 1)
+beta = coef(cog.bas)
+beta
+```
+
+```{r}
+plot(beta, subset = 1:12, ask = F)
+```
+
+```{r}
+credible_intervals = confint(beta)
+plot(credible_intervals, main=paste("g-prior alpha=",alphapar))
+```
+```{r}
+data_
+```
+
+```{r}
+data_1 = data_[, -1]
+beta_mean = beta$postmean
+y_hat =  beta_mean[1] + 
+         beta_mean[2] *   data_$WILL5000PR_PCH + 
+         beta_mean[3] *   data_$HSN1F_PCH + 
+         beta_mean[4] *   data_$DCOILBRENTEU_PCH + 
+         beta_mean[5] *   data_$CORESTICKM159SFRBATL_PCH + 
+         beta_mean[6] *   data_$TOTALSA_PCH + 
+         beta_mean[7] *   data_$CPIUFDSL_PCH + 
+         beta_mean[8] *   data_$DEXJPUS_PCH + 
+         beta_mean[9] *   data_$MICH_PCH + 
+         beta_mean[10] *  data_$VIXCLS_PCH + 
+         beta_mean[11] *  data_$PAYEMS_PCH + 
+         beta_mean[12] *  data_$PPIACO_PCH
+```
+```{r}
+
+# Plot
+plot1 = ggplot(data = data, aes(x = DATE, y = INDPRO_PCH)) + 
+  geom_point(color = "steelblue") + xlab("DATE") +
+  geom_line(data = output, aes(x = data_1, y = y_hat, color = "first"),lty=1) +
+  scale_colour_manual(values="darkorange", labels="Posterior Mean", name="") +
+  scale_linetype_manual(values = c(1, 2), labels = c("Mean", "Predictions"),
+                        name = "95% C.I.")
+plot1
+```
+

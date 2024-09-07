@@ -1,15 +1,21 @@
 ---
-title: "Code"
+title: "Notebook of "
 output: html_document
 date: "2024-08-10"
 ---
 
+# A Bayesian Approach to Modeling the Industrial Production Index
+
+## Overiview
+
+This notebook contains the R code for the bayesian analysis of the Industrial Production Index (IPI). The detailed explanation of the results are exposed in the report. The modelling is performed using the `BAS` library.
+
+### Package and Data import Package import:
+
 ```{r}
-# pyplot-like plots in R
 library("ggplot2")
 library("BAS")
-library(loo)
-
+library("loo")
 ```
 
 Read data:
@@ -18,69 +24,121 @@ Read data:
 data = read.csv("indprod.csv")
 data$DATE = as.Date(data$DATE)
 
+```
 
-# Remove outliers:
-# data = data[-which(data$INDPRO_PCH == min(data$INDPRO_PCH)),]
+## Data Pre-Processing
+
+Firt visualization of the dataset:
+
+```{r}
+g1 = ggplot(data, aes(x = DATE, y = INDPRO_PCH)) +
+  geom_point(color = "darkgrey", size = 2) +  # Punti neri
+  labs(title = "Time-Series of IPI", x = "Date", y = "IPI Index") +  
+  theme_minimal() + 
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    axis.title.x = element_text(size = 14),  
+    axis.title.y = element_text(size = 14),  
+    axis.text = element_text(size = 12)  
+  )   
+g1
+```
+
+The dataset contains a lot of outliers that can increase the model's error. For this reason we can filter the data where the modulus is to far with respect to the others.
+
+See: [Bayesian Robustness to Outliers in Linear Regression and Ratio Estimation](https://arxiv.org/pdf/1612.05307).
+
+```{r}
+data_limit = 3
+g2 = g1 +
+  geom_point(data = subset(data, INDPRO_PCH > data_limit | INDPRO_PCH < -data_limit), 
+             aes(x = DATE, y = INDPRO_PCH), 
+             color = "red", 
+             size = 4.0, shape = 21, stroke = 1.0)
+g2
+```
+
+Deleting outliers from dataset:
+
+```{r}
+data = data[-which(data$INDPRO_PCH == min(data$INDPRO_PCH)),]
 ```
 
 ```{r}
-g1 = ggplot(data=data, aes(x=as.Data(DATE),y=INDPRO_PCH))
-
-# Plot dell'indice nel tempo
-plot(as.Date(data$DATE), data$INDPRO_PCH, type="l", 
-     col="black", lwd=1,
-     xlab="Date", ylab="IPI Index", main="Time-Series of IPI")
+g3 = g1 +
+  geom_point(data = subset(data, INDPRO_PCH > data_limit | INDPRO_PCH < -data_limit), 
+             aes(x = DATE, y = INDPRO_PCH), 
+             color = "red", size = 4.0, shape = 21, fill = NA, stroke = 1.0)
+g3
 ```
 
 ```{r}
+# Define covarietes
 data_ = data[, -1]
-model = lm(INDPRO_PCH ~ ., data = data_)
-y_freq = predict(model)
-coef(model)
 ```
 
+We split randomly the dataset in two parts: - `train_data`: contains the data used for fitting the model - `test_data` : contains the data used for test the model
+
 ```{r}
-set.seed(123)  # Imposta un seme per rendere la suddivisione riproducibile
-train_index <- sample(1:nrow(data_), 0.7 * nrow(data_))
+set.seed(123) 
+train_index = sample(1:nrow(data_), 0.7 * nrow(data_))
 
 # Training set
-train_data = data[train_index, ]
-train_data_ = train_data[, -1]
+train_data  = data[train_index, ]
+train_data_ = data_[train_index, ] 
 
 # Testing set
-test_data = data[-train_index, ]
-test_data_ = test_data[, -1]
-```
-
-# Frequenstistic Linear Regression
-
-```{r}
-# ggplot(data = train_data, aes(x = DATE, y = INDPRO_PCH)) +
-#  geom_point(color = "steelblue") +
-#  geom_line(data = train_data, aes(x = DATE, y = y_hat, color = "first"),  lty = 1) +
-#  xlab("Date") + ylab("IPI") + 
-#  ggtitle("Regression Line")
+test_data  = data[-train_index, ]
+test_data_ = data_[-train_index, ]
 ```
 
 # Bayesian Linear Regression
 
+We try to fit the model with different priors: - Zellner's G-prior - Zellner's JZS For a better readibility of the code we define a function based on `bas.lm`.
+
+```{r}
+bas_lm = function (prior="g-prior", alpha=1.0){
+  local_model = bas.lm(INDPRO_PCH ~ ., data =  train_data_, 
+                       prior=prior, alpha=alpha, 
+                       modelprior = Bernoulli(1), 
+                       include.always = ~ ., 
+                       n.models = 1)
+  return(local_model)
+}
+```
+
+Some useful function for plotting credible intervals:
+
+```{r}
+plot_credible_interval = function(intervals, alpha){
+  # Conversion to dataframe for better plotting
+  df = as.data.frame(intervals)[1:12, ]
+  ggplot(df, aes(x = rownames(df), y = df[, 3], ymin = df[,1], ymax = df[,2])) +
+    geom_point(size = 1) +
+    geom_pointrange() +
+    labs(title = paste("  Credible intervals with alpha = ", alpha),
+         y ="Estimate", x = NULL) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+}
+```
+
 ## Zellner's G-prior
 
 ```{r}
-alphapar = 10
-# data_no_date = data[, -1]
-model_object = bas.lm(INDPRO_PCH ~ ., data =  train_data_, prior="g-prior", alpha=alphapar, modelprior = Bernoulli(1), include.always = ~ ., n.models = 1)
-beta = coef(model_object)
-beta
+alphapar = 10.0
+model_g_prior = bas_lm("g-prior", alphapar)
+beta_g_prior = coef(model_g_prior)
+beta_g_prior
 ```
 
 ```{r}
-plot(beta, subset = 1:12, ask = F)
+plot(beta, subset = 1:12, ask=F)
 ```
 
 ```{r}
-credible_intervals = confint(beta)
-plot(credible_intervals, main=paste("g-prior alpha=",alphapar), cex.axis=0.2)
+ci_g_prior = confint(beta_g_prior)
+plot_credible_interval(ci_g_prior, alphapar)
 ```
 
 ```{r}
@@ -101,7 +159,6 @@ y_hat =  beta_mean[1] +
          beta_mean[11] *  train_data_$PAYEMS_PCH + 
          beta_mean[12] *  train_data_$PPIACO_PCH
 ```
-
 
 ```{r}
 out = confint(beta)[, 1:2]
@@ -135,8 +192,6 @@ y_up =   beta_up[1] +
          beta_up[12] *  train_data_$PPIACO_PCH
 ```
 
-
-
 ```{r}
 # Plot
 plot1 = 
@@ -162,6 +217,7 @@ plot2 =
 
 plot2
 ```
+
 ```{r}
 predictions = predict(model_object, 
                       newdata = train_data_,
@@ -184,6 +240,7 @@ plot3
 ```
 
 ### Model Selection (metodo prof)
+
 ```{r}
 cog.BIC = bas.lm(INDPRO_PCH ~ ., data = train_data_,
                  prior = "BIC", modelprior = uniform())
@@ -199,7 +256,8 @@ cog.BIC$namesx[selectedVars]
 
 ```
 
-### Model Selection (metodo Bayes Factor -> esempio con una sola variabile)
+### Model Selection (metodo Bayes Factor -\> esempio con una sola variabile)
+
 ```{r}
 reduced_model = bas.lm(INDPRO_PCH ~ . - CPIUFDSL_PCH, data =  train_data_, prior="g-prior", alpha=alphapar, modelprior = Bernoulli(1), include.always = ~ ., n.models = 1)
 
@@ -208,8 +266,8 @@ BF
 # since it's below 1, it indicates that the data is more likely under the reduced model (removing CPIUFDSL_PCH) than under the full model.
 ```
 
-
 ## Zellner's JZS
+
 ```{r}
 alphapar = 1
 model_object_2 = bas.lm(INDPRO_PCH ~ ., data =  train_data_, prior="JZS", alpha=1, modelprior = Bernoulli(1), include.always = ~ ., n.models = 1)
@@ -225,12 +283,14 @@ plot(beta_2, subset = 1:12, ask = F)
 credible_intervals_2 = confint(beta_2)
 plot(credible_intervals_2, main=paste("JZS-prior alpha=",alphapar), cex.axis=0.2)
 ```
+
 ```{r}
 BF_2 <- exp(model_object$logmarg - model_object_2$logmarg)
 BF_2
 ```
 
 ## Plot actual values against predicted ones using Test Set
+
 ```{r}
 # Compute the predictions:
 pred.model_object <- predict(model_object, test_data_, estimator="BMA")
@@ -276,7 +336,3 @@ Pl2 = ggplot() + geom_point(aes(x = predictedValues, y = residValues), color = "
 library(gridExtra)
 grid.arrange(Pl1, Pl2, ncol=2)
 ```
-
-
-
-

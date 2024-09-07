@@ -1,0 +1,2 @@
+"0","data = read.csv(""indprod.csv"")"
+"0","data$DATE = as.Date(data$DATE)"

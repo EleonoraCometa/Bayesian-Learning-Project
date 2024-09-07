@@ -1,0 +1,4 @@
+"0","```r
+plot(bodyfat$Abdomen,bodyfat$Bodyfat,xlab=\"abdomen circumference (cm)\",ylab=\"body fat\")
+abline(beta,col='red')
+```"

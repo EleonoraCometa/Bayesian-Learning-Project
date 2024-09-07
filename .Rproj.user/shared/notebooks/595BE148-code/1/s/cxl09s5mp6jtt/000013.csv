@@ -1,0 +1,25 @@
+"0",""
+"0","# Plot"
+"0","plot1 = ggplot(data = data, aes(x = DATE, y = INDPRO_PCH)) + "
+"0","  geom_point(color = ""steelblue"") + xlab(""DATE"") +"
+"0","  geom_line(data = output, aes(x = data_1, y = y_hat, color = ""first""),lty=1) +"
+"0","  scale_colour_manual(values=""darkorange"", labels=""Posterior Mean"", name="""") +"
+"0","  scale_linetype_manual(values = c(1, 2), labels = c(""Mean"", ""Predictions""),"
+"0","                        name = ""95% C.I."")"
+"0","plot1"
+"1","[1m[33mError[39m in `geom_line()`:[22m
+[1m[22m[33m![39m Problem while computing aesthetics.
+[36mℹ[39m Error occurred in the 2nd layer.
+[1mCaused by error in `check_aesthetics()`:[22m
+[1m[22m[33m![39m Aesthetics must be either length 1 or the same as the data (600).
+[31m✖[39m Fix the following mappings: `x`.
+Backtrace:
+[90m  1. [39m[1mbase[22m (local) `<fn>`(x)
+[90m  2. [39mggplot2:::print.ggplot(x)
+[90m  4. [39mggplot2:::ggplot_build.ggplot(x)
+[90m  5. [39mggplot2:::by_layer(...)
+[90m 12. [39mggplot2 (local) f(l = layers[[i]], d = data[[i]])
+[90m 13. [39ml$compute_aesthetics(d, plot)
+[90m 14. [39mggplot2 (local) compute_aesthetics(..., self = self)
+[90m 15. [39m[1m[94mggplot2:::check_aesthetics([39m[22mevaled, n[1m[94m)[39m[22m
+"

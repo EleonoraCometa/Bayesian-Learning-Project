@@ -1,0 +1,18 @@
+"0","```r
+
+
+#prednew$Ypred 
+#newdata$Bodyfat
+
+
+BPM <- predict(cog.basZS2, estimator = \"BPM\", newdata=newdata,se.fit = TRUE)
+conf.fit <- confint(BPM, parm = \"mean\")
+conf.pred <- confint(BPM, parm = \"pred\")
+plot(conf.pred, main=\"Out of sample: pred. (black) vs true (red)\")
+```"
+"1","NULL
+"
+"0","```r
+points(seq(1:n),newdata$Bodyfat,col=\"red\")
+
+```"

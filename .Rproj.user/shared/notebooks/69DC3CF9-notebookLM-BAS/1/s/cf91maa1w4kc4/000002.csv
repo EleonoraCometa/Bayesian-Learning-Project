@@ -1,0 +1,35 @@
+"0","```r
+fulllm=lm(Bodyfat ~ ., data = bodyfat)
+summary(fulllm)
+```"
+"1","
+Call:
+lm(formula = Bodyfat ~ ., data = bodyfat)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-11.1687  -2.8639  -0.1014   3.2085  10.0068 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -18.18849   17.34857  -1.048  0.29551    
+Age           0.06208    0.03235   1.919  0.05618 .  
+Weight       -0.08844    0.05353  -1.652  0.09978 .  
+Height       -0.06959    0.09601  -0.725  0.46925    
+Neck         -0.47060    0.23247  -2.024  0.04405 *  
+Chest        -0.02386    0.09915  -0.241  0.81000    
+Abdomen       0.95477    0.08645  11.044  < 2e-16 ***
+Hip          -0.20754    0.14591  -1.422  0.15622    
+Thigh         0.23610    0.14436   1.636  0.10326    
+Knee          0.01528    0.24198   0.063  0.94970    
+Ankle         0.17400    0.22147   0.786  0.43285    
+Biceps        0.18160    0.17113   1.061  0.28966    
+Forearm       0.45202    0.19913   2.270  0.02410 *  
+Wrist        -1.62064    0.53495  -3.030  0.00272 ** 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 4.305 on 238 degrees of freedom
+Multiple R-squared:  0.749,	Adjusted R-squared:  0.7353 
+F-statistic: 54.65 on 13 and 238 DF,  p-value: < 2.2e-16
+"

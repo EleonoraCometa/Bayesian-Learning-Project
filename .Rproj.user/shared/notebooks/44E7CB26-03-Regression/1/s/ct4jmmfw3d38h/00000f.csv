@@ -1,0 +1,5 @@
+"0","# Extract potential outlier data point"
+"0","outlier = data.frame(x = bodyfat$Abdomen[39], y = bodyfat$Bodyfat[39])"
+"0",""
+"0","# Identify potential outlier"
+"0","plot1 + geom_point(data=outlier, aes(x=x, y=y), color=""red"", pch=1, cex=6)"

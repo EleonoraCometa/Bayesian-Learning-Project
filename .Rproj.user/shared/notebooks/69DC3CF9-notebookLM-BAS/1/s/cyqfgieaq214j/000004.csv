@@ -1,0 +1,4 @@
+"0","```r
+plot(resid)
+abline(h=0,col=\"red\")
+```"

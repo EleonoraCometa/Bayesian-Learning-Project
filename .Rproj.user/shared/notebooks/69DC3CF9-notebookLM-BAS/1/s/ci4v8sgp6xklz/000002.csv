@@ -1,0 +1,26 @@
+"0","```r
+bodyfat.lm = lm(Bodyfat ~ Abdomen, data = bodyfat)
+summary(bodyfat.lm)
+```"
+"1","
+Call:
+lm(formula = Bodyfat ~ Abdomen, data = bodyfat)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-19.0160  -3.7557   0.0554   3.4215  12.9007 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -39.28018    2.66034  -14.77   <2e-16 ***
+Abdomen       0.63130    0.02855   22.11   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 4.877 on 250 degrees of freedom
+Multiple R-squared:  0.6617,	Adjusted R-squared:  0.6603 
+F-statistic: 488.9 on 1 and 250 DF,  p-value: < 2.2e-16
+"
+"0","```r
+beta = coef(bodyfat.lm)
+```"

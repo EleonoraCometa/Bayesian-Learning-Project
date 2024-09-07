@@ -1,0 +1,28 @@
+"0","```r
+alphapar=100
+cog.bas = bas.lm(Bodyfat ~ ., data =  bodyfat, prior=\"g-prior\",alpha=alphapar, modelprior = Bernoulli(1), include.always = ~ ., n.models = 1)
+beta = coef(cog.bas)
+beta
+```"
+"1","
+ Marginal Posterior Summaries of Coefficients: 
+
+ Using  BMA 
+
+ Based on the top  1 models 
+           post mean  post SD   post p(B != 0)
+Intercept  19.15079    0.27121   1.00000      
+Age         0.06146    0.03219   1.00000      
+Weight     -0.08757    0.05326   1.00000      
+Height     -0.06890    0.09553   1.00000      
+Neck       -0.46594    0.23131   1.00000      
+Chest      -0.02363    0.09865   1.00000      
+Abdomen     0.94532    0.08602   1.00000      
+Hip        -0.20549    0.14519   1.00000      
+Thigh       0.23376    0.14364   1.00000      
+Knee        0.01513    0.24078   1.00000      
+Ankle       0.17227    0.22037   1.00000      
+Biceps      0.17980    0.17028   1.00000      
+Forearm     0.44755    0.19814   1.00000      
+Wrist      -1.60459    0.53229   1.00000      
+"

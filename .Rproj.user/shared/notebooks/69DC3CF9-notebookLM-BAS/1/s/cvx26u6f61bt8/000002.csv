@@ -1,0 +1,31 @@
+"0","```r
+cog.basZS = bas.lm(Bodyfat ~ ., data =  bodyfat, prior=\"JZS\", modelprior = Bernoulli(1), include.always = ~ ., n.models = 1)
+#plot(cog.basZS, which=4)
+betaZS = coef(cog.basZS)
+betaZS
+```"
+"1","
+ Marginal Posterior Summaries of Coefficients: 
+
+ Using  BMA 
+
+ Based on the top  1 models 
+           post mean  post SD   post p(B != 0)
+Intercept  19.15079    0.27121   1.00000      
+Age         0.06118    0.03211   1.00000      
+Weight     -0.08717    0.05314   1.00000      
+Height     -0.06859    0.09531   1.00000      
+Neck       -0.46382    0.23079   1.00000      
+Chest      -0.02352    0.09843   1.00000      
+Abdomen     0.94102    0.08582   1.00000      
+Hip        -0.20455    0.14486   1.00000      
+Thigh       0.23270    0.14331   1.00000      
+Knee        0.01506    0.24023   1.00000      
+Ankle       0.17149    0.21987   1.00000      
+Biceps      0.17899    0.16989   1.00000      
+Forearm     0.44551    0.19769   1.00000      
+Wrist      -1.59729    0.53108   1.00000      
+"
+"0","```r
+plot(betaZS,subset = 2:7, ask = F)
+```"

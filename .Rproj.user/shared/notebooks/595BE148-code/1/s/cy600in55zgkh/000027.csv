@@ -1,0 +1,5 @@
+"0","ggplot(data = data, aes(x = DATE, y = INDPRO_PCH)) +"
+"0","  geom_point(color = ""steelblue"") +"
+"0","  geom_abline(intercept = beta, slope = beta, col='darkorange') +"
+"0","  xlab(""Date"") + ylab(""IPI"") + "
+"0","  ggtitle(""Regression Line"")"

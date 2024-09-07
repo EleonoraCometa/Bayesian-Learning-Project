@@ -1,0 +1,577 @@
+---
+title: "Bayesian Regression"
+output:
+  html_document:
+    df_print: paged
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+**Main author**: Matteo Gianella
+([matteo.gianella\@polimi.it](mailto:matteo.gianella@polimi.it))
+
+**Lecturer**: Andrea Viselli
+([andrea.viselli\@polimi.it](mailto:andrea.viselli@polimi.it))
+
+## 1. The linear model
+
+Linear regression is an approach for modelling the relationship between
+a scalar *response* - also referred to as the *dependent* or *target
+variable* - typically denoted by $y$, and one or more explanatory
+variables, namely the *regressors* - or *covariates*, *independent
+variables*, *predictors* - given in a matrix
+$\mathbf{X} \in \mathbb{R}^{n \times p}$. In particular, such a
+relationship is assumed to be **linear** in the parameters of the
+equation, although some of the regressors might not be linear.
+
+The case of one explanatory variable (i.e. $p = 1$) is called **simple
+linear regression**; for more than one ($p \geq 2$), it is called
+**multiple linear regression**.
+
+The general setup consists of the target variable $y$ and design matrix
+$\mathbf{X}$, whose relationship is modelled as
+
+$$
+ y = X \beta + \varepsilon
+$$
+
+where $\varepsilon$ is a pure error term which is assumed to have
+Gaussian distribution with $0$-mean and variance $\sigma^2$. By the
+property of the Gaussian density, it follows that $y$ is also normally
+distributed with mean $\mathbf{X}\beta$ and variance depending on the
+variance the error term, i.e. $\sigma^2$. For this reason, this is
+commonly called **Gaussian linear regression model**. We will consider
+such a framework also for Bayesian regression.
+
+**Questions of interest:**
+
+-   Which social factors influence unemployment duration and the
+    probability of finding a new job?
+-   Which economic indicators are best related to recession occurrences?
+-   Which physiological levels are most strongly correlated with
+    aneurysm strokes?
+-   What will be the aggregate health expenditure for Italy in 2026?
+
+**Answers:**
+
+-   The linear regression model allows us to do inference of the
+    parameters $\beta$, i.e. to compute credible intervals and test
+    hypotheses, to check whether there exists a significant association
+    between $X$ and $y$;
+-   Based on past data, we are able to fit an appropriate model for
+    prediction of $y$ through $X$, that is after learning the
+    relationship between $X$ and $y$.
+
+### *Example 1: modeling a generic curve*
+
+Despite its simplicity, linear regression can be a powerful way to
+approximating every function of real data. We consider the following
+Data Generating Process (DGP), namely a rule describing how the data
+were generated, given by
+
+$$
+ y = 1+0.5x^2+2\log x + \varepsilon, \qquad \text{ for } x \in [1,10]
+$$ where $\varepsilon \sim \mathcal{N}(0,50)$ is the error term, also
+called *noise* or *disturbance*, because we usually collect data that
+are subject to measurement error.
+
+```{r}
+# Clear the workspace
+rm(list=ls())
+
+# pyplot-like plots in R
+library("ggplot2")
+ 
+# Generate data
+n <- 50
+sigma2 <- 50
+e <- rnorm(n,0,sigma2^0.5) 
+x <- seq(1,10,length.out=n)
+y <- 1+0.5*x^2+2*log(x) + e 
+data <- data.frame(x,y)
+
+f <- function(x){
+  1 + 0.5*x^2+2*log(x)
+}
+
+# Plot
+g1 <- ggplot(data=data, aes(x=x,y=y)) + 
+  geom_point()+
+  geom_function(fun=f, col="red")
+g1
+```
+
+The simulated data are spread around the true function, and not exactly
+equal to it, because of the noise component. You may change the variance
+of $\varepsilon$ to increase or decrease the variability of the
+dependent variable $y$.
+
+As an introduction to Bayesian linear regression, we consider a
+conjugate model where the variance $\sigma^2$ is known. The model setup
+is
+
+$$
+\begin{align*}
+  (y_1,\dots,y_n) \mid \beta &\sim \mathcal{N}_{n}\left(\, \mathbf{X}\beta, \sigma^2\mathbf{I}_{n} \,\right) \\[5pt]
+  \beta &\sim \mathcal{N}_{p}\left(\, \mu_{0}, \tau^2\mathbf{I}_{p} \,\right)
+\end{align*}
+$$
+
+where $\mathbf{X} \in \mathbb{R}^{n \times p}$ collects the covariates
+used to explain the responses $\left( y_1, \dots, y_n \right)$. However,
+to kick-start we consider a simple linear regression where
+
+$$
+\mathbf{X}
+= 
+\begin{bmatrix}
+1 & x_1 \\
+1 & x_2 \\
+\vdots & \vdots \\
+1 & x_n
+\end{bmatrix}
+$$ where the explanatory variable $(x_1,\ldots,x_n)$ was denoted by `x`
+in the chuck of code above, and is simply the range of values in the
+interval $[1,10]$. Notice that we include an intercept term (the column
+of ones), otherwise we force the regression line to pass through the
+origin.
+
+One may check that the posterior distribution is
+$\beta \mid \mathbf{y} \sim \mathcal{N}_{p}\left(\mu_n, S_n\right)$,
+where the parameters are defined as
+
+$$
+\begin{align*}
+  S_n &= \left(S_0^{-1} + \mathbf{X}^T\mathbf{X}/\sigma^2\right)^{-1} &\qquad \mu_n &= S_n\left(S_0^{-1}\mu_0 + \mathbf{X}^T\mathbf{y}/\sigma^2\right)
+\end{align*}
+$$
+
+Since we are interested in reconstructing the curve from the data
+points, we need the predictive distribution
+$\hat{\mathbf{y}} \mid \mathbf{y},\mathbf{X}$, for which a closed
+expression is available. This is
+
+$$
+\hat{\mathbf{y}} \mid \mathbf{y},\mathbf{X} \sim \mathcal{N}\left(\mu_n^T\mathbf{X}, \sigma^2 + \mathbf{X}^TS_n\mathbf{X}\right).
+$$
+
+```{r}
+# Construct the design matrix
+p = 2
+X = matrix(c(rep(1,n),x),n,p)
+
+# Prior hyperparameters (non-informative)
+m0 <- matrix(0,p,1)
+S0 <- diag(x=1000,p,p)
+
+# Posterior parameters
+SN <- solve(solve(S0) + t(X) %*% X/sigma2)
+mN <- SN %*% (solve(S0) %*% m0 + t(X) %*% y/sigma2)
+
+# Predictive distribution in the same points
+y_hat <- t(mN) %*% t(X)
+sigma2_hat <- array(0, n)
+for(i in 1:n){
+ sigma2_hat[i] <- sigma2 + X[i,] %*% SN %*% X[i,]
+}
+
+# Plot
+g_bayes <- g1 + 
+  geom_line(aes(x=x,y=y_hat[1,], color="Predictive"), linewidth=1) +
+  geom_function(aes(color="True Function"), fun = f, linewidth=1) +
+  geom_ribbon(aes(x=x,y=y_hat[1,],
+                  ymin=y_hat[1,]-1.96*sigma2_hat^0.5,
+                  ymax=y_hat[1,]+1.96*sigma2_hat^0.5, 
+                  fill="95% C.S."), alpha=0.2) +
+  scale_color_manual(name="Curves", values=c('blue','red')) +
+  scale_fill_manual(name="Bands", values='blue')
+g_bayes
+```
+
+A few comments:
+
+-   The red line is the true function of $y$ and the black points are
+    the data that we simulated;
+-   The blue line is the *expected value* (also called *fitted value*)
+    of the predictive distribution at each point $x$, i.e.
+    $\hat{y} = E(y|x) = X\beta$;
+-   The shaded blue area correspond to the $95\%$ credible interval of
+    the predictive distribution.
+-   The fit is not "good", as the points at the two extremes are
+    predicted to be lower than the true ones whereas those in the middle
+    are predicted to be higher.
+
+Thus, we would like to improve the fit of the model to the data by
+including further covariates. Since any nonlinear function can be
+approximated by a polynomial, we may consider
+
+$$
+y = \beta_0+\beta_1x+\beta_2x^2+\beta_3x^3+\ldots
+$$
+
+and truncate the summation at some degree $p$. We consider this approach
+and truncate at $p=2$, that is we include up to a squared transformation
+of the data $x$.
+
+```{r}
+# Construct the new design matrix
+p = 3
+X = matrix(c(rep(1,n),x,x^2),n,p)
+
+# Prior hyperparameters (non-informative)
+m0 <- matrix(0,p,1)
+S0 <- diag(x=1000,p,p)
+
+# Posterior parameters
+SN <- solve(solve(S0) + t(X) %*% X/sigma2)
+mN <- SN %*% (solve(S0) %*% m0 + t(X) %*% y/sigma2)
+
+# Predictive distribution in the same points
+y_hat <- t(mN) %*% t(X)
+sigma2_hat <- array(0, n)
+for(i in 1:n){
+ sigma2_hat[i] <- sigma2 + X[i,] %*% SN %*% X[i,]
+}
+
+# Plot
+g_bayes <- g1 + 
+  geom_line(aes(x=x,y=y_hat[1,], color="Predictive"), linewidth=1) +
+  geom_function(aes(color="True Function"), fun = f, linewidth=1) +
+  geom_ribbon(aes(x=x,y=y_hat[1,],
+                  ymin=y_hat[1,]-1.96*sigma2_hat^0.5,
+                  ymax=y_hat[1,]+1.96*sigma2_hat^0.5, 
+                  fill="95% C.S."), alpha=0.2) +
+  scale_color_manual(name="Curves", values=c('blue','red')) +
+  scale_fill_manual(name="Bands", values='blue')
+g_bayes
+```
+
+### *Example 2: estimate the body fat percentage*
+
+The `bodyfat` dataset lists estimates of the percentage of body fat
+determined by underwater weighting and various body circumference
+measurements for $252$ men. Accurate measurement of body fat is
+inconvenient / costly and it iscdesirable to have easy methods of
+estimating body fat that are cheaper andcconvenient.
+
+```{r}
+# Clear the workspace
+rm(list=ls())
+
+# An easy-to-use package for Bayesian Linear Regression
+library("BAS")
+
+# Load dataset
+data(bodyfat)
+head(bodyfat)
+```
+
+The dataset comprehends several variables that may be used to estimate
+the body fat, see `help(bodyfat)`. We believe that the circumference of
+the abdomen, expressed in cm, may be a good predictor of percent body
+fat.
+
+```{r}
+# Plot
+hist <- ggplot(data=bodyfat, aes(x=Bodyfat)) + 
+  geom_histogram(aes(y=after_stat(density)), color='steelblue', fill='lightblue',
+                 bins = 20) +
+  ggtitle("Histogram of Bodyfat") + ylab("Density")
+scatter <- ggplot(data=bodyfat, aes(x=Abdomen, y=Bodyfat)) +
+  geom_point(color='steelblue') +
+  ggtitle("Bodyfat vs. Abdomen") + xlab("Abdomen circumference (cm)")
+gridExtra::grid.arrange(hist, scatter, ncol=2)
+```
+
+## 2. Frequentist linear regression
+
+We consider a simple linear regression model where $y_i$ and $x_i$
+denote percent body fat and the abdomen's circumference (cm),
+respectively. For unit $i$, the model is formulated as $$
+y_i = \beta_0+ \beta_1 x_i + \epsilon_i \qquad i=1,\dots,n
+$$
+
+where $\varepsilon_i\sim\mathcal{N}(0,\sigma^2)$. In the classical
+frequentist framework, estimation is carried out by ordinary least
+squares (OLS).
+
+The function `lm` quickly performs the task.
+
+```{r}
+# Frequentist linear model
+bodyfat.lm = lm(Bodyfat ~ Abdomen, data = bodyfat)
+summary(bodyfat.lm)
+```
+
+```{r}
+# Extract coefficients
+beta = coef(bodyfat.lm)
+
+# Visualize regression line on the scatter plot
+ggplot(data = bodyfat, aes(x = Abdomen, y = Bodyfat)) +
+  geom_point(color = "steelblue") +
+  geom_abline(intercept = beta[1], slope = beta[2], col='darkorange') +
+  xlab("Abdomen circumference (cm)") + ylab("Body fat (pc)") + 
+  ggtitle("Regression Line")
+```
+
+The classical approach allows us to compute confidence intervals,
+$t$-tests on the regression coefficients, and other diagnostics as shown
+in the output of `summary(bodyfat.lm)`.
+
+## 3. Bayesian linear regression
+
+From a modelling point of view, nothing changes when shifting from a
+frequentist to a Bayesian perspective. That is, the model's equation is
+the same,
+
+$$
+y_i = \beta_0 + \beta_1 x_i + \epsilon_i,  \quad \varepsilon_i\sim\mathcal{N}(0,\sigma^2),
+$$
+
+but we change our method to estimate the parameters $\beta_0$,
+$\beta_1$, and $\sigma^2$.
+
+In particular, we set a prior and then update it to obtain the posterior
+densities of the unknown parameters $\beta_0$, $\beta_1$ and $\sigma^2$
+based on the dependent variable $(y_1, \dots, y_n)$ and independent
+variable $(x_1, \dots, x_n)$, where $n$ is the number of observations.
+
+We assume a **non-informative** prior, i.e.
+
+$$
+\begin{align*}
+\pi\left(\, \beta_0,\beta_1 \mid \sigma^2 \,\right) &\propto 1 \\[5pt]
+\pi\left(\sigma^2\right) &\propto \frac{1}{\sigma^2}
+\end{align*}
+$$
+
+Thus we apply the Bayes' rule to derive the joint posterior distribution
+after observing the data $y_1, \ldots, y_n$. The posterior distribution
+of $\sigma^2$ is an Inverse Gamma,
+
+$$
+\sigma^2 \mid \mathbf{y} \sim \mathcal{IG}\left(\frac{n-2}{2}, \frac{SSE}{2}\right),
+$$
+
+where $SSE = \sum_{i=1}^{n}\hat{\varepsilon}_{i}^2$ is the sum of
+squares of errors (SSE). Finally, the posterior distributions of the
+coefficients read
+
+$$
+\begin{align}
+& \beta_0 \mid \sigma^2, \mathbf{y} \sim \mathcal{N}\left(\hat{\beta}_0, \sigma^2 \left(\frac{1}{n}+\frac{\bar{x}^2}{S_{xx}}\right)\right), \\
+& \beta_1 \mid \sigma^2, \mathbf{y} \sim \mathcal{N}\left(\hat{\beta}_1, \frac{\sigma^2}{S_{xx}}\right),
+\end{align}
+$$
+
+where $\hat{\beta}_0$ and $\hat{\beta}_1$ are the OLS (or MLE in the
+Gaussian model), estimates of the coefficients, and
+$S_{xx} = \sum_{i=1}^n (x_i - \bar{x})^2$.
+
+In other words, under the reference prior, the **posterior credible
+intervals are in fact numerically equivalent to the confidence intervals
+from the frequentist OLS estimation**.
+
+Since the credible intervals are numerically the same as the confidence
+intervals, we can use the `lm` function to obtain the OLS estimates and
+construct the credible intervals of $\beta_0$ and $\beta_1$.
+
+```{r}
+output = summary(bodyfat.lm)$coef[, 1:2]
+output
+```
+
+The `confint` function provides $95\%$ confidence intervals. Under the
+reference prior, they are equivalent to the $95\%$ credible intervals.
+The code below extracts them and relabels the output as the Bayesian
+results.
+
+```{r}
+out = cbind(output, confint(bodyfat.lm))
+colnames(out) = c("posterior mean", "posterior std", "2.5", "97.5")
+round(out, 3)
+```
+
+These intervals coincide with the confidence intervals from the
+frequentist approach. Nevertheless, the primary difference is the
+interpretation.
+
+For example, based on the data, we believe that there is $95\%$ chance
+that $\beta_1$ is in the credible interval $[0.575,0.688]$, i.e., we
+believe that there is $95\%$ chance that body fat will increase by
+$5.75\%$ up to $6.88\%$ for every additional $10$ centimeter increase in
+the abdomen circumference.
+
+```{r}
+# Construct current prediction
+alpha = bodyfat.lm$coefficients[1]
+beta = bodyfat.lm$coefficients[2]
+new_x = seq(min(bodyfat$Abdomen), max(bodyfat$Abdomen), 
+            length.out = 100)
+
+y_hat = alpha + beta * new_x
+
+# Get lower and upper bounds for mean
+ymean = data.frame(predict(bodyfat.lm,
+                           newdata = data.frame(Abdomen = new_x),
+                           interval = "confidence",
+                           level = 0.95))
+
+# Get lower and upper bounds for prediction
+ypred = data.frame(predict(bodyfat.lm,
+                           newdata = data.frame(Abdomen = new_x),
+                           interval = "prediction",
+                           level = 0.95))
+
+output = data.frame(x = new_x, y_hat = y_hat,
+                    ymean_lwr = ymean$lwr, ymean_upr = ymean$upr,
+                    ypred_lwr = ypred$lwr, ypred_upr = ypred$upr)
+
+# Plot
+plot1 = ggplot(data = bodyfat, aes(x = Abdomen, y = Bodyfat)) + 
+  geom_point(color = "steelblue") + xlab("Abdomen circumference (cm)") +
+  geom_line(data = output, aes(x = new_x, y = y_hat, color = "first"),lty=1) +
+  geom_line(data = output, aes(x = new_x, y = ymean_lwr, lty = "second")) +
+  geom_line(data = output, aes(x = new_x, y = ymean_upr, lty = "second")) +
+  geom_line(data = output, aes(x = new_x, y = ypred_upr, lty = "third")) +
+  geom_line(data = output, aes(x = new_x, y = ypred_lwr, lty = "third")) + 
+  scale_colour_manual(values="darkorange", labels="Posterior Mean", name="") +
+  scale_linetype_manual(values = c(1, 2), labels = c("Mean", "Predictions"),
+                        name = "95% C.I.")
+plot1
+```
+
+Note in the above figure the legend "C.I." can either mean *confidence
+interval* or *credible interval*. The difference boils down to its
+interpretation.
+
+As we can see from the previous figure, we observe a datum which cannot
+be easily predicted by our model, as it is far away from the $95\%$
+credible interval we computed. This is usually called *outlier.*
+
+```{r}
+# Extract potential outlier data point
+outlier = data.frame(x = bodyfat$Abdomen[39], y = bodyfat$Bodyfat[39])
+
+# Identify potential outlier
+plot1 + geom_point(data=outlier, aes(x=x, y=y), color="red", pch=1, cex=6)
+```
+
+In fact, we are not able to provide a proper prediction for this datum.
+Indeed, if we compute it we get the following:
+
+```{r}
+# Prediction for the outlier
+pred.39 = predict(bodyfat.lm, newdata = bodyfat[39, ], interval = "prediction", level = 0.95)
+out = cbind(bodyfat[39,]$Abdomen, pred.39)
+colnames(out) = c("abdomen", "prediction", "lower", "upper")
+print(out)
+```
+
+Based on the data, a Bayesian would expect that a man with waist
+circumference of $148.1$ centimeters should have body fat of $54.216\%$
+with $95\%$ chance that it is between $44.097\%$ and $64.335\%$.
+
+While we expect the majority of the data will be within the prediction
+intervals, as exhibited by the dashed lines, unit 39 seems to be well
+below, outside the interval.
+
+This example was taken from
+[here](https://statswithr.github.io/book/introduction-to-bayesian-regression.html){.uri}.
+
+### *Example 3: Zellner's informative G-prior*
+
+Now that we have warmed up, we consider more than a single explanatory
+variable. In the remainder, we will denote $X$ as a $n\times p+1$
+matrix.
+
+The prior density reads
+
+$$
+\beta\mid\sigma^2\sim\mathcal N_{k}\left(0,\alpha\sigma^2 (X^{t}X)^{-1} \right)\\
+(\beta_0,\sigma^2)\sim\pi(\beta_0,\sigma^2)=\sigma^{-2}
+$$
+
+which is thus decomposed as a (conditional) Gaussian prior for $\beta$
+and an improper (Jeffreys) prior for $(\beta_0,\sigma^2)$.
+
+The hyperparameter $\alpha>0$ can be interpreted as describing the
+weight given to the data w.r.t. a model with only the intercept
+different from zero. For instance, setting $\alpha = n$ gives the prior
+the same weight as one observation of the sample, thus corresponding to
+a noninformative prior.
+
+Now, we estimate a number of model specifications with the function
+`bas.lm` using the Zellner's G-prior and one predictor, namely
+`bodyfat$Abdomen`. Among the inputs, we set `modelprior=Bernoulli(1)` to
+include all the covariates in the model with probability 1 (otherwise
+the routine also fits submodels) and we use several values of
+$\alpha = (0.001,0.01,0.1,1,10,n)$.
+
+```{r}
+library(latex2exp)
+
+output = data.frame(x=numeric(0),y_hat=numeric(0),alpha=numeric(0))
+
+# Calculate centered Abdomen circumference
+X = bodyfat$Abdomen-mean(bodyfat$Abdomen)
+
+n = length(X)
+new_x = seq(min(bodyfat$Abdomen), max(bodyfat$Abdomen), length.out = 100)
+
+for(alpha in c(0.001,0.01,0.1,1,10,n)){
+  
+  # Fit Bayesian linear model using g-prior and the current value of alpha
+  bodyfat.blm = bas.lm(bodyfat$Bodyfat ~ X, prior="g-prior", alpha=alpha,
+                       modelprior=Bernoulli(1))
+  
+  # Extract the posterior means of the intercept and the beta coefficients
+  intercept = coef(bodyfat.blm)$postmean[1]
+  beta = coef(bodyfat.blm)$postmean[2]
+  
+  # Calculate the predicted value of body fat percentage for the values in the 
+  # range of Abdomen circumference
+  y_hat = intercept + beta *(new_x - mean(bodyfat$Abdomen))
+  
+  # Append the results to the output data frame
+  output = rbind(output, data.frame(x = new_x, y_hat = y_hat, alpha=alpha))
+}
+
+output$alpha = as.factor(output$alpha)
+
+# Plot
+plot1 = ggplot(data = bodyfat, aes(x = Abdomen, y = Bodyfat)) + 
+  geom_point(color = "steelblue") + xlab("Abdomen circumference (cm)") +
+  geom_line(data = output, aes(x = x, y=y_hat, group=alpha, color=alpha),lty=1) +
+  scale_colour_manual(values=rainbow(length(levels(output$alpha))),name=TeX("$\\alpha$")) 
+plot1
+```
+
+When $\alpha$ is small, the posterior predicted values are similar to a
+model where only the intercept different from zero and the slopes are
+not, while as $\alpha$ increases the posterior predictions are more and
+more similar to the outcome of a model using a noninformative prior.
+
+Let's discuss the results in the object `bodyfat.blm`, corresponding to
+the choice of $\alpha=252$ (it is the last item we iterated over in the
+loop), i.e. an improper prior.
+
+### Exercise 1
+
+After setting up $\alpha$ as to have a noninformative prior, choose an
+arbitrary set of regressors and fit a multiple linear regression model.
+Then store the coefficients in `coef(bodyfat.blm)` and plot their
+posterior distribution (this is easy, you may just do
+`plot(coef(bodyfat.blm))`). Finally, use the `confint(coef(beta))`
+function to compute the coefficients' HPD and plot them (very easy,
+again).
+
+```{R}
+X = bodyfat[,3:4]
+alpha = 10^3
+
+# Copy-paste the estimation function from the
+# previous example.
+```

@@ -1,0 +1,14 @@
+"0","```r
+plot(fitted$Ypred[1:length(fitted$Ypred)],datalearning$Bodyfat[1:length(fitted$Ypred)],
+  pch = 16,
+  xlab = expression(hat(mu[i])), ylab = 'Y',type=\"p\")
+
+
+points(prednew$Ypred, newdata$Bodyfat,
+  pch = 16,
+  col=\"red\",type=\"p\"
+)
+```"
+"0","```r
+abline(0, 1)
+```"

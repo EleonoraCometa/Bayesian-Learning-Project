@@ -1,0 +1,4 @@
+"0","credible_intervals = confint(beta)"
+"0","plot(credible_intervals, main=paste(""g-prior alpha="",alphapar))"
+"1","NULL
+"

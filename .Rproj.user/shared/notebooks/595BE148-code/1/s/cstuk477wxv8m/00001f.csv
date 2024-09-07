@@ -1,0 +1,6 @@
+"0","g1 = ggplot(data=data, aes(x=as.Data(DATE),y=INDPRO_PCH))"
+"0",""
+"0","# Plot dell'indice nel tempo"
+"0","plot(as.Date(data$DATE), data$INDPRO_PCH, type=""l"", "
+"0","     col=""black"", lwd=1,"
+"0","     xlab=""Date"", ylab=""IPI Index"", main=""Time-Series of IPI"")"
