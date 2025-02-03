@@ -1,12 +1,12 @@
 ---
-title: "Notebook of "
+title: "IPI Bayesian Regression"
 output: html_document
 date: "2024-08-10"
 ---
 
 # A Bayesian Approach to Modeling the Industrial Production Index
 
-## Overiview
+## Overview
 
 This notebook contains the R code for the bayesian analysis of the Industrial Production Index (IPI). The detailed explanation of the results are exposed in the report. The modelling is performed using the `BAS` library.
 
@@ -28,7 +28,7 @@ data$DATE = as.Date(data$DATE)
 
 ## Data Pre-Processing
 
-Firt visualization of the dataset:
+First visualization of the dataset:
 
 ```{r}
 g1 = ggplot(data, aes(x = DATE, y = INDPRO_PCH)) +
