@@ -17,6 +17,7 @@ library("ggplot2")
 library("BAS")
 library("loo")
 library(tidyr)
+library(dplyr)
 ```
 
 Read data:
@@ -352,12 +353,12 @@ We plot the different predictions in a single image:
 
 ```{r}
 # Change the dataframe into long
-results_long = results %>%
+results_long_g = results %>%
   pivot_longer(cols = -DATE, 
                names_to = "alpha", 
                values_to = "predictions")
 
-ggplot(results_long, aes(x = DATE, y = predictions, color = alpha)) +
+ggplot(results_long_g, aes(x = DATE, y = predictions, color = alpha)) +
   geom_line() +
   geom_point(data = ms_data_test, 
              aes(x = DATE, y = INDPRO_PCH), 
@@ -406,22 +407,17 @@ plot_credible_interval(credible_intervals_jzs, alpha = alphapar)
 ```
 
 ```{r}
-BF_2 <- exp(model_g_prior$logmarg - model_jzs_prior$logmarg)
-```
-
-
-```{r}
 results_alpha = compare_different_alpha(ms_data_train, 
                                         ms_data_test, 
                                         prior="JZS",
                                         c(0.1, 1, 10, 100, dim(ms_data_train)[1]))
 # Change the dataframe into long
-results_long = results_alpha %>%
+results_long_jzs = results_alpha %>%
   pivot_longer(cols = -DATE, 
                names_to = "alpha", 
                values_to = "predictions")
 
-ggplot(results_long, aes(x = DATE, y = predictions, color = alpha)) +
+ggplot(results_long_jzs, aes(x = DATE, y = predictions, color = alpha)) +
   geom_line() +
   geom_point(data = ms_data_test, 
              aes(x = DATE, y = INDPRO_PCH), 
@@ -432,50 +428,108 @@ ggplot(results_long, aes(x = DATE, y = predictions, color = alpha)) +
        y = "Predictions") 
 ```
 
-## Plot actual values against predicted ones using Test Set
-
+# Comparison of the different models
+In this section we want to compute the residual and compare the different implementations graphically.
+## G-prior 
 ```{r}
-# Compute the predictions:
-pred.model_g_prior <- predict(model_g_prior, test_data_, estimator="BMA")
-
-# Create the actual and predicted variables:
-actualValues = test_data_$INDPRO_PCH
-predictedValues = pred.model_g_prior$fit
-
-# Compute the residuals:
-residValues = predictedValues - actualValues
-
-# Plot actual vs predicted values:
-Pl1 = ggplot() + geom_point(aes(x = actualValues, y = predictedValues), color = "steelblue") +
-  xlab("Actual") + ylab("Predicted") + ggtitle("Predictions of INDPRO_CPH")
-
-# Plot the residuals:
-Pl2 = ggplot() + geom_point(aes(x = predictedValues, y = residValues), color = "darkred") +
-  xlab("Predicted") + ylab("Residuals") + ggtitle("Predicted VS Residuals")
-
-library(gridExtra)
-grid.arrange(Pl1, Pl2, ncol=2)
+residuals_g_prior = results
+# We use the predictions with different values of alpha computed before
+for(col in setdiff(names(results), "DATE")){
+  residuals_g_prior[[col]] = results[[col]] - ms_data_test$INDPRO_PCH
+}
 ```
 
+
 ```{r}
-# Compute the predictions:
-pred.model_g_prior_2 <- predict(model_g_prior_2, test_data_, estimator="BMA")
+# Transform and prepare data for the plot
+residuals_long_g = residuals_g_prior %>%
+  pivot_longer(cols = -DATE, 
+               names_to = "alpha", 
+               values_to = "residuals")
 
-# Create the actual and predicted variables:
-actualValues = test_data_$INDPRO_PCH
-predictedValues = pred.model_g_prior_2$fit
+residuals_long_g = residuals_long_g %>%
+  mutate(alpha = as.numeric(gsub("alpha=", "", alpha))) 
 
-# Compute the residuals:
-residValues = predictedValues - actualValues
+results_long_g = results_long_g %>%
+  mutate(alpha = as.numeric(gsub("alpha=", "", alpha))) 
 
-# Plot actual vs predicted values:
-Pl1 = ggplot() + geom_point(aes(x = actualValues, y = predictedValues), color = "steelblue") +
-  xlab("Actual") + ylab("Predicted") + ggtitle("Predictions of INDPRO_CPH")
+data_to_plot = residuals_long_g %>%
+  left_join(results_long_g, by = c("DATE", "alpha"))
 
-# Plot the residuals:
-Pl2 = ggplot() + geom_point(aes(x = predictedValues, y = residValues), color = "darkred") +
-  xlab("Predicted") + ylab("Residuals") + ggtitle("Predicted VS Residuals")
-
-library(gridExtra)
-grid.arrange(Pl1, Pl2, ncol=2)
+ggplot(data_to_plot, aes(x = predictions, y = residuals)) +
+  geom_point(alpha = 0.3) +  
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +  
+  facet_wrap(~ alpha, scales = "free") +  
+  theme_minimal() +
+  labs(x = "Predicted Value", y = "Residuals")
 ```
+```{r}
+# Prepare data 
+data_to_plot = results_long_g %>%
+  left_join(data.frame(
+              DATE=ms_data_test$DATE,
+              actual_values=ms_data_test$INDPRO_PCH
+            ), 
+            by = "DATE")
+
+ggplot(data_to_plot, aes(data_to_plot, x = actual_values, y = predictions)) +
+  geom_point(alpha = 0.3) +  
+  facet_wrap(~ alpha, scales = "free") +
+  xlim(-2, 2) +
+  ylim(-2, 2) +
+  geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +  
+  theme_minimal() +
+  labs(x = "Actual Value", y = "Predicted Values")
+```
+## JZS prior
+
+```{r}
+residuals_jzs = results_alpha
+# We use the predictions with different values of alpha computed before
+for(col in setdiff(names(results_alpha), "DATE")){
+  residuals_jzs[[col]] = results_alpha[[col]] - ms_data_test$INDPRO_PCH
+}
+
+# Transform and prepare data for the plot
+residuals_long_jzs = residuals_jzs %>%
+  pivot_longer(cols = -DATE, 
+               names_to = "alpha", 
+               values_to = "residuals")
+
+residuals_long_jzs = residuals_long_jzs %>%
+  mutate(alpha = as.numeric(gsub("alpha=", "", alpha))) 
+
+results_long_jzs = results_long_jzs %>%
+  mutate(alpha = as.numeric(gsub("alpha=", "", alpha))) 
+
+data_to_plot = residuals_long_jzs %>%
+  left_join(results_long_jzs, by = c("DATE", "alpha"))
+
+ggplot(data_to_plot, aes(x = predictions, y = residuals)) +
+  geom_point(alpha = 0.3) +  
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +  
+  facet_wrap(~ alpha, scales = "free") +  
+  theme_minimal() +
+  labs(x = "Predicted Value", y = "Residuals")
+```
+```{r}
+# Prepare data 
+data_to_plot = results_long_jzs %>%
+  left_join(data.frame(
+              DATE=ms_data_test$DATE,
+              actual_values=ms_data_test$INDPRO_PCH
+            ), 
+            by = "DATE")
+
+ggplot(data_to_plot, aes(data_to_plot, x = actual_values, y = predictions)) +
+  geom_point(alpha = 0.3) +  
+  facet_wrap(~ alpha, scales = "free") +
+  xlim(-2, 2) +
+  ylim(-2, 2) +
+  geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +  
+  theme_minimal() +
+  labs(x = "Actual Value", y = "Predicted Values")
+```
+
+
+
