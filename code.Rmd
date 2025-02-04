@@ -1,10 +1,10 @@
 ---
-title: "IPI Bayesian Regression"
 output: html_document
 date: "2024-08-10"
+authors: "Eleonora Cometa, Nicola De March"
 ---
 
-# A Bayesian Approach to Modeling the Industrial Production Index
+# A Bayesian Approach Modeling the Industrial Production Index
 
 ## Overview
 
@@ -35,8 +35,7 @@ First visualization of the dataset:
 ```{r}
 g1 = ggplot(data_complete, aes(x = DATE, y = INDPRO_PCH)) +
   geom_point(color = "darkgrey", size = 2) +  # Punti neri
-  labs(title = "Time-Series of IPI", x = "Date", y = "IPI Index") +  
-  theme_minimal() + 
+  labs(x = "Date", y = "INDPRO_PCH") +  
   theme(
     plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
     axis.title.x = element_text(size = 14),  
@@ -56,8 +55,8 @@ g2 = g1 +
   geom_point(data = subset(data_complete, INDPRO_PCH > data_limit | INDPRO_PCH < -data_limit), 
              aes(x = DATE, y = INDPRO_PCH), 
              color = "red", 
-             size = 4.0, shape = 21, stroke = 1.0) + 
-  theme_minimal()
+             size = 4.0, shape = 21, stroke = 1.0) 
+
 g2
 ```
 
@@ -73,7 +72,6 @@ data = subset(data_complete, INDPRO_PCH >= limit_min & INDPRO_PCH <= limit_max)
 g3 = ggplot(data, aes(x = DATE, y = INDPRO_PCH)) +
     geom_point(color = "darkgrey", size = 2) +
     labs(title = "Time-Series of IPI", x = "Date", y = "IPI Index") +  
-    theme_minimal() + 
     theme(
       plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
       axis.title.x = element_text(size = 14),  
@@ -125,10 +123,9 @@ plot_credible_interval = function(intervals, alpha){
   # Conversion to dataframe for better plotting
   df = as.data.frame(intervals)[1:12, ]
   ggplot(df, aes(x = rownames(df), y = df[, 3], ymin = df[,1], ymax = df[,2])) +
-    geom_point(size = 0.1) +
-    geom_pointrange() +
-    labs(title = paste("  Credible intervals with alpha = ", alpha),
-         y ="Estimate", x = NULL) +
+    geom_point(size = 2) +
+    geom_errorbar(width = 0.2) +
+    labs(y ="Estimate", x = NULL) +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 }
 ```
@@ -245,7 +242,8 @@ plot2 =
             aes(x = DATE, y = y_fit, color = "first"),  lty = 1) +
   scale_colour_manual(values="darkorange", labels="Posterior Mean", name="") +
   scale_linetype_manual(values = c(1, 2), labels = c("lower" , "upper"),
-                        name = "95% C.I.")
+                        name = "95% C.I.") +
+  theme(legend.position = "top")
 
 plot2
 ```
@@ -329,14 +327,22 @@ plot(beta_ms, ask=F)
 predictions_ms = predict(model_g_prior_ms, newdata = ms_data_test_, se.fit = TRUE)
 
 ggplot(data = test_data, aes(x = DATE, y = INDPRO_PCH)) + 
-geom_point(color = "steelblue", alpha=0.5) + xlab("DATE") +
-geom_line(data = ms_data_test, aes(x = DATE, y = predictions_ms$fit, color = "With model selection"),  lty = 1) +
-geom_line(data = test_data, aes(x = DATE, y = predictions$fit, color="Complete model"), lty=1) +
-labs(
-  x="Date",
-  y="Prediction"
-)+
-scale_color_manual(name = "Model", values = c("With model selection" = "blue", "Complete model" = "darkorange"))
+        geom_point(color = "steelblue", alpha=0.5) + xlab("DATE") +
+        geom_line(data = ms_data_test, 
+                  aes(x = DATE, 
+                      y = predictions_ms$fit, 
+                      color = "With model selection"),  
+                  lty = 1) +
+        geom_line(data = test_data, 
+                  aes(x = DATE, 
+                      y = predictions$fit, 
+                      color="Complete model"), lty=1) +
+        labs(
+          x="Date",
+          y="Prediction"
+        ) +
+        theme(legend.position = "top")+
+        scale_color_manual(name = "Model", values = c("With model selection" = "blue", "Complete model" = "darkorange"))
   
 
 ```
@@ -346,7 +352,6 @@ Now, the idea is analyze the behaviour of the model when alpha changes.
 ```{r}
 alphas = c(0.001, 0.1, 1, 10, 100, dim(ms_data_train_)[1])
 results = compare_different_alpha(ms_data_train_, ms_data_test, "g-prior", alphas)
-results
 ```
 
 We plot the different predictions in a single image:
@@ -410,7 +415,7 @@ plot_credible_interval(credible_intervals_jzs, alpha = alphapar)
 results_alpha = compare_different_alpha(ms_data_train, 
                                         ms_data_test, 
                                         prior="JZS",
-                                        c(0.1, 1, 10, 100, dim(ms_data_train)[1]))
+                                        c(0.1, 1, 10, 100))
 # Change the dataframe into long
 results_long_jzs = results_alpha %>%
   pivot_longer(cols = -DATE, 
@@ -426,11 +431,28 @@ ggplot(results_long_jzs, aes(x = DATE, y = predictions, color = alpha)) +
              alpha=0.5) +
   labs(x = "Date", 
        y = "Predictions") 
+
+
+```
+
+```{r}
+mse_values = numeric(4)
+alphas = c(0.1, 1, 10, 100)
+# Compute MSE for each value of alpha
+for (i in 1:length(alphas)) {
+  alpha_column = paste("alpha", alphas[i], sep = "=")
+  mse_values[i] = mse(ms_data_test$INDPRO_PCH, results_alpha[[alpha_column]])
+}
+mse_df = data.frame(alpha = alphas, MSE = mse_values)
+mse_df
 ```
 
 # Comparison of the different models
+
 In this section we want to compute the residual and compare the different implementations graphically.
-## G-prior 
+
+## g-Prior
+
 ```{r}
 residuals_g_prior = results
 # We use the predictions with different values of alpha computed before
@@ -438,7 +460,6 @@ for(col in setdiff(names(results), "DATE")){
   residuals_g_prior[[col]] = results[[col]] - ms_data_test$INDPRO_PCH
 }
 ```
-
 
 ```{r}
 # Transform and prepare data for the plot
@@ -459,10 +480,13 @@ data_to_plot = residuals_long_g %>%
 ggplot(data_to_plot, aes(x = predictions, y = residuals)) +
   geom_point(alpha = 0.3) +  
   geom_hline(yintercept = 0, linetype = "dashed", color = "red") +  
-  facet_wrap(~ alpha, scales = "free") +  
+  facet_wrap(~ alpha, scales = "free") +
+  xlim(-1.5,1.5) +
+  ylim(-2, 2) +
   theme_minimal() +
   labs(x = "Predicted Value", y = "Residuals")
 ```
+
 ```{r}
 # Prepare data 
 data_to_plot = results_long_g %>%
@@ -475,13 +499,14 @@ data_to_plot = results_long_g %>%
 ggplot(data_to_plot, aes(data_to_plot, x = actual_values, y = predictions)) +
   geom_point(alpha = 0.3) +  
   facet_wrap(~ alpha, scales = "free") +
-  xlim(-2, 2) +
+  xlim(-1.5, 1.5) +
   ylim(-2, 2) +
   geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +  
   theme_minimal() +
   labs(x = "Actual Value", y = "Predicted Values")
 ```
-## JZS prior
+
+## JZS-Prior
 
 ```{r}
 residuals_jzs = results_alpha
@@ -510,8 +535,11 @@ ggplot(data_to_plot, aes(x = predictions, y = residuals)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "red") +  
   facet_wrap(~ alpha, scales = "free") +  
   theme_minimal() +
+  xlim(-1.5, 1.5) +
+  ylim(-2, 2) +
   labs(x = "Predicted Value", y = "Residuals")
 ```
+
 ```{r}
 # Prepare data 
 data_to_plot = results_long_jzs %>%
@@ -530,6 +558,3 @@ ggplot(data_to_plot, aes(data_to_plot, x = actual_values, y = predictions)) +
   theme_minimal() +
   labs(x = "Actual Value", y = "Predicted Values")
 ```
-
-
-
